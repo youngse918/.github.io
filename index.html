@@ -285,9 +285,9 @@ let map=null, markers=[], editing=false, hotI=-1;
 const DEFAULT0=[37.28440,127.01020];
 const UNSET=BLDG_LL[0][0]===DEFAULT0[0]&&BLDG_LL[0][1]===DEFAULT0[1];
 const TILES=[
- {n:'지도',u:'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',a:'&copy; OpenStreetMap contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',sub:'abcd',max:20},
+ {n:'지도',u:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',a:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',max:19},
  {n:'위성',u:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',a:'Tiles &copy; Esri',max:19},
- {n:'OSM 지도',u:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',a:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',max:19}];
+ {n:'지도 2',u:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',a:'Tiles &copy; Esri',max:19}];
 let tileLayer=null, tileK=-1, tileOk=0, tileErr=0;
 function setTiles(k,auto){
   if(!map)return;
@@ -316,7 +316,7 @@ function initMap(){
   map=L.map('map',{scrollWheelZoom:false}).setView(c,UNSET?17:19);
   $('tilebtns').innerHTML=TILES.map((t,k)=>`<button class="btn" data-k="${k}">${t.n}</button>`).join('');
   $('tilebtns').onclick=e=>{const b=e.target.closest('[data-k]');if(b)setTiles(+b.dataset.k)};
-  setTiles(0);
+  setTiles(location.protocol==='file:'?2:0);
   BLDG_LL.forEach((p,i)=>{
     const m=L.marker(p,{icon:icon(i),draggable:false,keyboard:true,title:(i+1)+'번 건물'}).addTo(map);
     m.on('click',()=>{if(editing)return;hot(i);const r=$('r'+i);r.scrollIntoView({block:'center',behavior:'smooth'});const f=r.querySelector('input');if(f)f.focus({preventScroll:true})});
