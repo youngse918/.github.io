@@ -386,15 +386,36 @@ async function snap(){
   if(editing)setEdit(false);
   const W=1100,estH=document.body.scrollHeight*1.15;
   const scale=Math.max(0.6,Math.min(1.5,30000/estH));
-  return html2canvas(document.body,{scale,useCORS:true,backgroundColor:'#ffffff',windowWidth:W,logging:false,
+  KEEP=[];
+  const cv=await html2canvas(document.body,{scale,useCORS:true,backgroundColor:'#ffffff',windowWidth:W,logging:false,
     ignoreElements:el=>el.classList&&(el.classList.contains('actions')||el.classList.contains('edittools')||el.classList.contains('leaflet-control-zoom')||el.id==='editbtn'),
-    onclone:doc=>{doc.querySelectorAll('textarea').forEach(t=>{const src=document.getElementById(t.id);const d=doc.createElement('div');d.style.cssText='white-space:pre-wrap;word-break:break-all;border:1px solid #cfd6dd;border-radius:6px;padding:8px;min-height:60px;background:#fff;font:inherit;color:#1b2625';d.textContent=src?src.value:t.value;t.replaceWith(d)})}});
+    onclone:doc=>{doc.querySelectorAll('textarea').forEach(t=>{const src=document.getElementById(t.id);const d=doc.createElement('div');d.style.cssText='white-space:pre-wrap;word-break:break-all;border:1px solid #cfd6dd;border-radius:6px;padding:8px;min-height:60px;background:#fff;font:inherit;color:#1b2625';d.textContent=src?src.value:t.value;t.replaceWith(d)});
+      const top=doc.body.getBoundingClientRect().top;
+      doc.querySelectorAll('img,figure,tr,#map,p,h1,h2,h3,label,li,.stage,.stat,.badge,.q>div,.defn,.legend,.chip,input,select').forEach(el=>{const r=el.getBoundingClientRect();if(r.height>0)KEEP.push([(r.top-top)*scale,(r.bottom-top)*scale])});
+    }});
+  KEEP0=KEEP.slice();
+  return cv;
 }
+let KEEP=[],KEEP0=[];
 const b64bytes=u=>{const s=atob(u.split(',')[1]);const a=new Uint8Array(s.length);for(let i=0;i<s.length;i++)a[i]=s.charCodeAt(i);return a};
-function shrink(cv,f){const c=document.createElement('canvas');c.width=Math.round(cv.width*f);c.height=Math.round(cv.height*f);const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(cv,0,0,c.width,c.height);return c}
+function shrink(cv,f){KEEP=KEEP0.map(([t,b])=>[t*f,b*f]);const c=document.createElement('canvas');c.width=Math.round(cv.width*f);c.height=Math.round(cv.height*f);const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(cv,0,0,c.width,c.height);return c}
+function cutRows(cv,step){ /* 글자·그림·표 행을 자르지 않는 위치 찾기 */
+  const g=cv.getContext('2d'),H=cv.height,W=cv.width,cuts=[0];let y=0;
+  const inside=r=>KEEP.some(([t,b])=>b-t<step*0.9&&r>t+1&&r<b-1);
+  const busy=r=>{const d=g.getImageData(0,r,W,1).data;let n=0;for(let x=8;x<W*4;x+=8){if(Math.abs(d[x]-d[x-8])+Math.abs(d[x+1]-d[x-7])+Math.abs(d[x+2]-d[x-6])>40)n++}return n};
+  while(H-y>step){
+    const ideal=y+step,lo=Math.round(ideal-step*0.35),ns=[];
+    for(let r=lo;r<=ideal;r++)ns.push(inside(r)?1e9:busy(r));
+    const nmin=Math.min(...ns);let best=-1,run=0;
+    if(nmin<1e9){const q=i=>ns[i]<=nmin+2;for(let i=ns.length-1;i>=0;i--){if(q(i)){run++;if(run>=6){let j=i;while(j>0&&q(j-1))j--;const bot=i+run-1;best=lo+Math.round((j+bot)/2);break}}else run=0}}
+    if(best<0){let bi=ns.indexOf(nmin);best=nmin<1e9?lo+bi:ideal}
+    cuts.push(best);y=best;
+  }
+  cuts.push(H);return cuts;
+}
 function slices(cv,q){ /* A4 한 쪽씩 잘라 JPEG로 */
-  const pw=595.28,ph=841.89,m=22,iw=pw-2*m,ih=ph-2*m,step=Math.floor(cv.width*ih/iw),out=[];
-  for(let y=0;y<cv.height;y+=step){const h=Math.min(step,cv.height-y),c=document.createElement('canvas');c.width=cv.width;c.height=h;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,h);g.drawImage(cv,0,y,cv.width,h,0,0,cv.width,h);out.push({b:b64bytes(c.toDataURL('image/jpeg',q)),w:c.width,h})}
+  const pw=595.28,ph=841.89,m=22,iw=pw-2*m,ih=ph-2*m,step=Math.floor(cv.width*ih/iw),out=[],cuts=cutRows(cv,step);
+  for(let i=0;i<cuts.length-1;i++){const y=cuts[i],h=cuts[i+1]-y;if(h<2)continue;const c=document.createElement('canvas');c.width=cv.width;c.height=h;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,h);g.drawImage(cv,0,y,cv.width,h,0,0,cv.width,h);out.push({b:b64bytes(c.toDataURL('image/jpeg',q)),w:c.width,h})}
   return out;
 }
 function buildPDF(pages){
