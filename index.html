@@ -172,7 +172,8 @@ textarea{min-height:84px;resize:vertical}
     <div class="q"><label for="syn"><i>종합</i>세 자료(업종 변화, 임대료, 주민 인구)를 종합하면 이 변화로 누가 이익을 얻고 누가 피해를 입었는가? 2단계에서 고른 생애주기 단계를 바꾸고 싶다면 이유와 함께 쓴다.</label><textarea id="syn"></textarea></div>
   <div class="actions">
     <button class="btn main" id="submit" hidden>제출</button>
-    <button class="btn" id="print">저장 (인쇄·PDF)</button>
+    <button class="btn" id="savepdf">PDF로 저장</button>
+    <button class="btn" id="saveimg">이미지로 저장</button>
     <button class="btn" id="reset">초기화</button>
     <span class="status" id="status" role="status"></span>
   </div>
@@ -290,7 +291,7 @@ function setTiles(k,auto){
   if(!map)return;
   if(tileLayer)map.removeLayer(tileLayer);
   const t=TILES[k];tileK=k;tileOk=0;tileErr=0;
-  tileLayer=L.tileLayer(t.u,{maxZoom:t.max,subdomains:t.sub||'abc',attribution:t.a}).addTo(map);
+  tileLayer=L.tileLayer(t.u,{crossOrigin:'anonymous',maxZoom:t.max,subdomains:t.sub||'abc',attribution:t.a}).addTo(map);
   tileLayer.on('tileload',()=>{tileOk++;if(tileOk===1)$('tilemsg').textContent=''});
   tileLayer.on('tileerror',()=>{tileErr++});
   document.querySelectorAll('#tilebtns .btn').forEach((b,j)=>b.classList.toggle('on',j===k));
@@ -375,7 +376,41 @@ function refresh(){
 
 /* ---- actions ---- */
 const say=m=>{$('status').textContent=m};
-$('print').onclick=()=>window.print();
+/* ---- PDF·이미지 저장 ---- */
+const LIBS={h2c:'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',pdf:'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'};
+const loadJS=u=>new Promise((ok,no)=>{if(document.querySelector(`script[src="${u}"]`))return ok();const e=document.createElement('script');e.src=u;e.onload=ok;e.onerror=()=>no(new Error('load'));document.head.appendChild(e)});
+const fname=ext=>`행궁동_화서문로_${(S.sid||'학번').trim()}_${(S.sname||'이름').trim()}.${ext}`.replace(/[\\/:*?"<>|\s]+/g,'_');
+async function snap(){
+  await loadJS(LIBS.h2c);
+  if(editing)setEdit(false);
+  return html2canvas(document.body,{scale:1.5,useCORS:true,backgroundColor:'#ffffff',windowWidth:1100,
+    ignoreElements:el=>el.classList&&(el.classList.contains('actions')||el.classList.contains('edittools')||el.classList.contains('leaflet-control-zoom')||el.id==='editbtn'),
+    onclone:doc=>{
+      doc.querySelectorAll('textarea').forEach(t=>{const src=document.getElementById(t.id);const d=doc.createElement('div');d.className=t.className;d.style.cssText='white-space:pre-wrap;word-break:break-all;border:1px solid #cfd6dd;border-radius:6px;padding:8px;min-height:60px;background:#fff;font:inherit';d.textContent=src?src.value:t.value;t.replaceWith(d)});
+    }});
+}
+function dl(url,name){const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove()}
+async function saveAs(kind){
+  const b=$(kind==='pdf'?'savepdf':'saveimg');b.disabled=true;say('저장 파일을 만드는 중이다…');
+  try{
+    const cv=await snap();
+    if(kind==='img'){dl(cv.toDataURL('image/png'),fname('png'))}
+    else{
+      await loadJS(LIBS.pdf);const {jsPDF}=window.jspdf;const pdf=new jsPDF({unit:'mm',format:'a4'});
+      const W=210,H=297,m=8,iw=W-2*m,ih=H-2*m,pxPerPage=Math.floor(cv.width*ih/iw);
+      for(let y=0,pg=0;y<cv.height;y+=pxPerPage,pg++){
+        const h=Math.min(pxPerPage,cv.height-y),c=document.createElement('canvas');c.width=cv.width;c.height=h;
+        const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,h);g.drawImage(cv,0,y,cv.width,h,0,0,cv.width,h);
+        if(pg)pdf.addPage();pdf.addImage(c.toDataURL('image/jpeg',0.92),'JPEG',m,m,iw,h*iw/cv.width);
+      }
+      pdf.save(fname('pdf'));
+    }
+    say('저장했다. 다운로드 폴더를 확인한다.');
+  }catch(e){say('저장하지 못했다. 인터넷 연결을 확인하고 다시 누른다.')}
+  finally{b.disabled=false}
+}
+$('savepdf').onclick=()=>saveAs('pdf');
+$('saveimg').onclick=()=>saveAs('img');
 let rs=false;
 $('reset').onclick=()=>{
   if(!rs){rs=true;$('reset').textContent='정말 지우기';say('입력한 내용이 모두 지워진다. 한 번 더 누르면 지운다.');setTimeout(()=>{rs=false;$('reset').textContent='초기화'},4000);return}
