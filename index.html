@@ -381,20 +381,40 @@ const H2C='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.
 const LIMIT={img:4.7*1024*1024,pdf:9.5*1024*1024};
 const loadJS=u=>new Promise((ok,no)=>{if(window.html2canvas)return ok();const e=document.createElement('script');e.src=u;e.onload=ok;e.onerror=()=>no(new Error('저장 도구를 불러오지 못했다(인터넷 연결 확인)'));document.head.appendChild(e)});
 const fname=ext=>`행궁동_화서문로_${(S.sid||'학번').trim()}_${(S.sname||'이름').trim()}.${ext}`.replace(/[\\/:*?"<>|\s]+/g,'_');
+function qText(id){const l=document.querySelector(`label[for="${id}"]`);if(!l)return '';const i=l.querySelector('i');const body=[...l.childNodes].filter(n=>n!==i).map(n=>n.textContent).join('').trim();const card=l.closest('.dcard'),h=card?card.querySelector('h3'):null;return (h?h.textContent.trim()+' — ':'')+(i?'['+i.textContent.trim()+'] ':'')+body}
+function buildReport(mapURL){
+  const r=document.createElement('div');r.id='report';
+  r.style.cssText='position:absolute;left:-12000px;top:0;width:900px;box-sizing:border-box;padding:28px 32px;background:#fff;color:#1b2625;font-size:15px;line-height:1.6';
+  const A=v=>v&&v.trim()?esc(v):'<span style="color:#99a">(작성하지 않음)</span>';
+  const QA=(q,v)=>`<div class="rq" style="margin:14px 0 4px;font-weight:700">${esc(q)}</div><div class="ra" style="white-space:pre-wrap;word-break:break-all;border:1px solid #cfd6dd;border-radius:6px;padding:10px 12px;min-height:44px">${A(v)}</div>`;
+  const cnt=[0,0,0,0,0,0];
+  const rows=Array.from({length:N},(_,i)=>{const w=was(i),n=nowOf(i),k=chgIdx(w.c,n.c);if(k>=0)cnt[k]++;const f=c=>c?String(c).replace(/,/g,'+'):'—';
+    return `<tr><td style="text-align:center">${i+1}</td><td>${esc(w.b||'—')}</td><td style="text-align:center">${f(w.c)}</td><td>${esc(n.b||'—')}</td><td style="text-align:center">${f(n.c)}</td><td>${k<0?'—':`<span class="badge b${k}">${CHG[k]}</span>`}</td></tr>`}).join('');
+  const td='border:1px solid #d5dbe0;padding:5px 8px';
+  r.innerHTML=`<h1 style="font-size:22px;margin:0 0 4px">행궁동 화서문로, 얼마나 변했는가? — 활동 결과</h1>
+  <p style="margin:0 0 18px;color:#4a5857">학번 ${esc(S.sid||'')} · 이름 ${esc(S.sname||'')} · 저장 ${new Date().toLocaleDateString('ko-KR')}</p>
+  <h2 style="font-size:18px;border-bottom:2px solid #1b2625;padding-bottom:4px">1단계 지도화</h2>
+  ${mapURL?`<img src="${mapURL}" style="width:100%;border:1px solid #cfd6dd;border-radius:6px;display:block">`:'<p style="color:#99a">(지도를 이미지로 담지 못했다. 아래 표로 대신한다.)</p>'}
+  <p class="rleg" style="margin:8px 0">${CHG.slice(0,5).map((c,k)=>`<span class="badge b${k}">${c}</span> ${cnt[k]}곳`).join('&nbsp;&nbsp; ')}</p>
+  <table style="width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;min-width:0"><colgroup><col style="width:5%"><col style="width:25%"><col style="width:9%"><col style="width:29%"><col style="width:9%"><col style="width:23%"></colgroup><thead><tr style="background:#eef1f4">${['#','2016년 업종','2016 분류','2026년 업종','2026 분류','변화 유형'].map(h=>`<th style="${td}">${h}</th>`).join('')}</tr></thead><tbody>${rows.replace(/<td/g,`<td style="${td}"`).replace(/<td style="[^"]*" style="/g,`<td style="${td};`)}</tbody></table>
+  <h2 style="font-size:18px;border-bottom:2px solid #1b2625;padding-bottom:4px;margin-top:26px">2단계 분석</h2>
+  ${QA(qText('q1'),S.q1)}${QA(qText('q2'),S.q2)}${QA(qText('q3'),S.q3)}
+  ${QA('[4] 이 거리는 장소의 생애주기 중 어느 단계에 있는가? — 선택한 단계: '+(S.stage||'(선택하지 않음)'),S.q4)}
+  <h2 style="font-size:18px;border-bottom:2px solid #1b2625;padding-bottom:4px;margin-top:26px">3단계 자료로 해석하기</h2>
+  ${['d1a','d1b','d2a','d2b','syn'].map(k=>QA(qText(k),S[k])).join('')}`;
+  return r;
+}
 async function snap(){
   await loadJS(H2C);
   if(editing)setEdit(false);
-  const W=1100,estH=document.body.scrollHeight*1.15;
-  const scale=Math.max(0.6,Math.min(1.5,30000/estH));
-  KEEP=[];
-  const cv=await html2canvas(document.body,{scale,useCORS:true,backgroundColor:'#ffffff',windowWidth:W,logging:false,
-    ignoreElements:el=>el.classList&&(el.classList.contains('actions')||el.classList.contains('edittools')||el.classList.contains('leaflet-control-zoom')||el.id==='editbtn'),
-    onclone:doc=>{doc.querySelectorAll('textarea').forEach(t=>{const src=document.getElementById(t.id);const d=doc.createElement('div');d.style.cssText='white-space:pre-wrap;word-break:break-all;border:1px solid #cfd6dd;border-radius:6px;padding:8px;min-height:60px;background:#fff;font:inherit;color:#1b2625';d.textContent=src?src.value:t.value;t.replaceWith(d)});
-      const top=doc.body.getBoundingClientRect().top;
-      doc.querySelectorAll('img,figure,tr,#map,p,h1,h2,h3,label,li,.stage,.stat,.badge,.q>div,.defn,.legend,.chip,input,select').forEach(el=>{const r=el.getBoundingClientRect();if(r.height>0)KEEP.push([(r.top-top)*scale,(r.bottom-top)*scale])});
-    }});
-  KEEP0=KEEP.slice();
-  return cv;
+  let mapURL='';
+  try{if(map&&window.L){const mc=await html2canvas($('map'),{useCORS:true,scale:1.6,backgroundColor:'#ffffff',logging:false,ignoreElements:el=>el.classList&&el.classList.contains('leaflet-control-zoom')});mapURL=mc.toDataURL('image/jpeg',0.9)}}catch(e){mapURL=''}
+  const rep=buildReport(mapURL);document.body.appendChild(rep);
+  const im=rep.querySelector('img');if(im&&!im.complete)await new Promise(ok=>{im.onload=im.onerror=ok});
+  const scale=2;KEEP=[];const top=rep.getBoundingClientRect().top;
+  rep.querySelectorAll('img,tr,h1,h2,p,.rq,.ra').forEach(el=>{const q=el.getBoundingClientRect();if(q.height>0)KEEP.push([(q.top-top)*scale,(q.bottom-top)*scale])});
+  try{const cv=await html2canvas(rep,{scale,backgroundColor:'#ffffff',logging:false});KEEP0=KEEP.slice();return cv}
+  finally{rep.remove()}
 }
 let KEEP=[],KEEP0=[];
 const b64bytes=u=>{const s=atob(u.split(',')[1]);const a=new Uint8Array(s.length);for(let i=0;i<s.length;i++)a[i]=s.charCodeAt(i);return a};
