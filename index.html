@@ -33,7 +33,7 @@ td{padding:6px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
 tbody tr:last-child td{border-bottom:0}
 tbody tr.hot td{background:#eef4ff}
 td.n{width:36px;font-weight:700;color:var(--muted)}
-td input[type=text],td select,textarea,.info input{font:inherit;width:100%;border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:#fff;color:var(--ink)}
+td input[type=text],td select,textarea,.info input,.info select{font:inherit;width:100%;border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:#fff;color:var(--ink)}
 td select{font-weight:700}td select.pick{width:100%}.fixed small{display:block;font-size:11px;color:#4c7fb0;margin-top:1px}.cls{display:flex;flex-wrap:wrap;gap:4px;align-items:center}.cls .cv{min-width:60px}.cls .ph{font-size:11px;color:#99a}.cls select{width:auto;font-size:12px;padding:3px 4px}.cls .clr{font-size:11px;border:1px solid var(--line);background:#fff;border-radius:5px;padding:2px 6px;cursor:pointer}.exb{font-size:10px;font-weight:700;color:#fff;background:#5f9a7a;border-radius:3px;padding:0 4px}
 td input::placeholder{color:#a3adbd}
 .fixed small{display:block;color:var(--muted);font-size:11px}
@@ -95,6 +95,7 @@ textarea{min-height:84px;resize:vertical}
     <p>낙후된 지역에 새로운 상점과 방문객이 몰려 활기를 띠면서 임대료와 물가가 오르고, 원래 살던 주민과 오래 장사하던 상인이 비용 부담을 이기지 못해 떠나게 되는 현상이다.</p></div>
   <p class="note">1·2단계에서는 거리의 업종 변화를, 3단계에서는 임대료와 주민 인구 자료를 해석한다. 세 가지를 종합하면 이 변화가 젠트리피케이션의 어느 단계에 해당하는지, 누가 이익을 얻고 누가 피해를 입었는지 판단할 수 있다.</p>
   <div class="info">
+    <div><label for="cls">반</label><select id="cls"><option value="">— 반 선택 —</option><option>도시의 미래 탐구 A반</option><option>도시의 미래 탐구 B반 2-1</option><option>도시의 미래 탐구 B반 2-2</option><option>도시의 미래 탐구 C반</option></select></div>
     <div><label for="sid">학번</label><input id="sid" type="text" inputmode="numeric" autocomplete="off"></div>
     <div><label for="sname">이름</label><input id="sname" type="text" autocomplete="off"></div>
   </div>
@@ -232,7 +233,7 @@ const STAGES=[['재생기','저렴한 임대료로 예술가와 청년 창업자
  ['상권쇠퇴기','폐업이 개업보다 많아지고 빈 건물과 프랜차이즈가 늘어난다.']];
 const $=id=>document.getElementById(id);
 const emptyRows=()=>Array.from({length:N},()=>({b16:'',c16:'',b26:'',c26:''}));
-let S={sid:'',sname:'',rows:emptyRows(),q1:'',q2:'',q3:'',stage:'',q4:'',d1a:'',d1b:'',d2a:'',d2b:'',syn:''};
+let S={cls:'',sid:'',sname:'',rows:emptyRows(),q1:'',q2:'',q3:'',stage:'',q4:'',d1a:'',d1b:'',d2a:'',d2b:'',syn:''};
 const fixedNow=i=>!!(NOW[i]&&(NOW[i].b||NOW[i].c));
 const nowOf=(i)=>fixedNow(i)?{b:NOW[i].b,c:NOW[i].c}:{b:S.rows[i].b26,c:S.rows[i].c26};
 
@@ -277,11 +278,11 @@ function build(){
   $('stats').innerHTML=CHG.slice(0,5).map((k,i)=>`<div class="stat s${i}"><b id="st${i}">0</b><span>${k}</span></div>`).join('');
   $('stages').innerHTML=STAGES.map((s,i)=>`<label class="stage"><input type="radio" name="stage" value="${s[0]}"><span><b>${i+1}. ${s[0]}</b><span>${s[1]}</span></span></label>`).join('');
   $('stages').addEventListener('change',e=>{S.stage=e.target.value;saveLocal()});
-  for(const k of ['q1','q2','q3','q4','sid','sname','d1a','d1b','d2a','d2b','syn']) $(k).addEventListener('input',e=>{S[k]=e.target.value;saveLocal()});
+  for(const k of ['q1','q2','q3','q4','cls','sid','sname','d1a','d1b','d2a','d2b','syn']) $(k).addEventListener(k==='cls'?'change':'input',e=>{S[k]=e.target.value;saveLocal()});
 }
 const paintCls=i=>{document.querySelectorAll(`select[data-ci="${i}"]`).forEach(d=>{d.value=S.rows[i][d.dataset.ck||'c16']||''})};
 function fill(){
-  for(const k of ['q1','q2','q3','q4','sid','sname','d1a','d1b','d2a','d2b','syn']) $(k).value=S[k]||'';
+  for(const k of ['q1','q2','q3','q4','cls','sid','sname','d1a','d1b','d2a','d2b','syn']) $(k).value=S[k]||'';
   document.querySelectorAll('#tbl [data-i]').forEach(el=>el.value=S.rows[el.dataset.i][el.dataset.k]||'');
   for(let i=0;i<N;i++)paintCls(i);
   document.querySelectorAll('input[name=stage]').forEach(r=>r.checked=r.value===S.stage);
@@ -387,7 +388,7 @@ const say=m=>{$('status').textContent=m};
 const H2C='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
 const LIMIT={img:4.7*1024*1024,pdf:9.5*1024*1024};
 const loadJS=u=>new Promise((ok,no)=>{if(window.html2canvas)return ok();const e=document.createElement('script');e.src=u;e.onload=ok;e.onerror=()=>no(new Error('저장 도구를 불러오지 못했다(인터넷 연결 확인)'));document.head.appendChild(e)});
-const fname=ext=>`행궁동_화서문로_${(S.sid||'학번').trim()}_${(S.sname||'이름').trim()}.${ext}`.replace(/[\\/:*?"<>|\s]+/g,'_');
+const fname=ext=>`행궁동_화서문로_${(S.cls||'').replace('도시의 미래 탐구 ','')}_${(S.sid||'학번').trim()}_${(S.sname||'이름').trim()}.${ext}`.replace(/[\\/:*?"<>|\s]+/g,'_');
 function qText(id){const l=document.querySelector(`label[for="${id}"]`);if(!l)return '';const i=l.querySelector('i');const body=[...l.childNodes].filter(n=>n!==i).map(n=>n.textContent).join('').trim();const card=l.closest('.dcard'),h=card?card.querySelector('h3'):null;return (h?h.textContent.trim()+' — ':'')+(i?'['+i.textContent.trim()+'] ':'')+body}
 function buildReport(mapURL){
   const r=document.createElement('div');r.id='report';
@@ -399,7 +400,7 @@ function buildReport(mapURL){
     return `<tr><td style="text-align:center">${i+1}</td><td>${esc(w.b||'—')}</td><td style="text-align:center">${f(w.c)}</td><td>${esc(n.b||'—')}</td><td style="text-align:center">${f(n.c)}</td><td>${k<0?'—':`<span class="badge b${k}">${CHG[k]}</span>`}</td></tr>`}).join('');
   const td='border:1px solid #d5dbe0;padding:5px 8px';
   r.innerHTML=`<h1 style="font-size:22px;margin:0 0 4px">행궁동 화서문로, 얼마나 변했는가? — 활동 결과</h1>
-  <p style="margin:0 0 18px;color:#4a5857">학번 ${esc(S.sid||'')} · 이름 ${esc(S.sname||'')} · 저장 ${new Date().toLocaleDateString('ko-KR')}</p>
+  <p style="margin:0 0 18px;color:#4a5857">${esc(S.cls||'')} · 학번 ${esc(S.sid||'')} · 이름 ${esc(S.sname||'')} · 저장 ${new Date().toLocaleDateString('ko-KR')}</p>
   <h2 style="font-size:18px;border-bottom:2px solid #1b2625;padding-bottom:4px">1단계 지도화</h2>
   ${mapURL?`<img src="${mapURL}" style="width:100%;border:1px solid #cfd6dd;border-radius:6px;display:block">`:'<p style="color:#99a">(지도를 이미지로 담지 못했다. 아래 표로 대신한다.)</p>'}
   <p class="rleg" style="margin:8px 0">${CHG.slice(0,5).map((c,k)=>`<span class="badge b${k}">${c}</span> ${cnt[k]}곳`).join('&nbsp;&nbsp; ')}</p>
@@ -490,11 +491,12 @@ $('saveimg').onclick=()=>saveAs('img');
 let rs=false;
 $('reset').onclick=()=>{
   if(!rs){rs=true;$('reset').textContent='정말 지우기';say('입력한 내용이 모두 지워진다. 한 번 더 누르면 지운다.');setTimeout(()=>{rs=false;$('reset').textContent='초기화'},4000);return}
-  rs=false;$('reset').textContent='초기화';S={sid:S.sid,sname:S.sname,rows:emptyRows(),q1:'',q2:'',q3:'',stage:'',q4:'',d1a:'',d1b:'',d2a:'',d2b:'',syn:''};fill();refresh();saveLocal();say('지웠다.');
+  rs=false;$('reset').textContent='초기화';S={cls:S.cls,sid:S.sid,sname:S.sname,rows:emptyRows(),q1:'',q2:'',q3:'',stage:'',q4:'',d1a:'',d1b:'',d2a:'',d2b:'',syn:''};fill();refresh();saveLocal();say('지웠다.');
 };
 if(SUBMIT_URL){
   $('submit').hidden=false;
   $('submit').onclick=async()=>{
+    if(!S.cls){say('반을 먼저 고른다.');$('cls').focus();return}
     if(!S.sid.trim()||!S.sname.trim()){say('학번과 이름을 먼저 적는다.');$('sid').focus();return}
     const btn=$('submit');btn.disabled=true;say('제출 파일(PDF)을 만드는 중이다…');
     const rows=S.rows.map((r,i)=>({n:i+1,b16:was(i).b,c16:was(i).c,b26:nowOf(i).b,c26:nowOf(i).c,chg:CHG[chgOf(i)]||''}));
@@ -503,7 +505,7 @@ if(SUBMIT_URL){
     catch(e){say('PDF를 만들지 못해 답안 글만 제출한다…')}
     try{
       say('제출하는 중이다…');
-      await fetch(SUBMIT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({sid:S.sid,sname:S.sname,rows,q1:S.q1,q2:S.q2,q3:S.q3,stage:S.stage,q4:S.q4,d1a:S.d1a,d1b:S.d1b,d2a:S.d2a,d2b:S.d2b,syn:S.syn,at:new Date().toISOString(),file})});
+      await fetch(SUBMIT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({cls:S.cls,sid:S.sid,sname:S.sname,rows,q1:S.q1,q2:S.q2,q3:S.q3,stage:S.stage,q4:S.q4,d1a:S.d1a,d1b:S.d1b,d2a:S.d2a,d2b:S.d2b,syn:S.syn,at:new Date().toISOString(),file})});
       say('제출했다'+(file?'(PDF 포함)':'(PDF 없이 글만)')+'. ('+new Date().toLocaleString('ko-KR')+') 고쳐서 다시 제출하면 새 줄로 쌓인다.');
     }catch(e){say('제출하지 못했다. 인터넷 연결을 확인한다.')}
     finally{btn.disabled=false}
