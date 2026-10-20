@@ -78,6 +78,7 @@ textarea{min-height:84px;resize:vertical}
 @media(max-width:820px){.pair{grid-template-columns:1fr}}
 @media(max-width:820px){.stats{grid-template-columns:repeat(2,1fr)}.stages{grid-template-columns:1fr 1fr}header.top h1{font-size:25px}#map{height:360px}}
 @media print{.btn,.edittools,.actions,.leaflet-control-zoom{display:none!important}.panel{break-inside:avoid;box-shadow:none}#map{height:380px}}
+#tbl .fixed{line-height:1.3}#tbl .fixed small{font-size:10px;line-height:1.2;margin-top:0}#tbl td{padding:4px 8px}#tbl td input[type=text],#tbl td select{padding:4px 6px}
 </style>
 </head>
 <body>
@@ -112,6 +113,7 @@ textarea{min-height:84px;resize:vertical}
     <span class="i"><span class="chip">E</span> 빈 건물</span>
   </div>
   <p class="note">한 건물에 점포가 여러 개이면, 주민 대상(N)과 외지인 대상(T)이 섞여 있을 때 N+T를 고르고, 분류가 모두 같을 때는 그 분류 하나만 고른다.</p>
+  <p class="note"><b>분류 참고</b> — N(주민 대상): 마트, 세탁소, 수선, 이발소·미용실, 철물점, 전기·설비, 부동산, 택배, 은행·금고 / T(외지인 대상): 카페, 소품샵, 셀프포토, 공방·체험, 관광객 대상 음식점·술집</p>
   <div class="tablewrap"><table id="tbl">
     <thead><tr><th>#</th><th style="min-width:200px">2016년 업종</th><th style="min-width:150px">2016 분류</th><th style="min-width:200px">2026년 업종</th><th style="min-width:150px">2026 분류</th><th>변화 유형</th></tr></thead>
     <tbody></tbody></table></div>
@@ -169,7 +171,7 @@ textarea{min-height:84px;resize:vertical}
       <div class="q"><label for="d2b"><i>해석</i>읽기에서 확인한 인구 변화는 1단계에서 확인한 업종 변화와 어떤 관련이 있을 수 있는가? 근거와 함께 쓴다.</label><textarea id="d2b"></textarea></div>
     </div>
   </div>
-    <div class="q"><label for="syn"><i>종합</i>세 자료(업종 변화, 임대료, 주민 인구)를 종합하면 이 변화로 누가 이익을 얻고 누가 피해를 입었는가? 2단계에서 고른 생애주기 단계를 바꾸고 싶다면 이유와 함께 쓴다.</label><textarea id="syn"></textarea></div>
+    <div class="q"><label for="syn"><i>종합</i>앞으로 행궁동은 어떤 모습일지 예측해 보자. 예상되는 문제 상황은 무엇인가?</label><textarea id="syn"></textarea></div>
   <div class="actions">
     <button class="btn main" id="submit" hidden>제출</button>
     <button class="btn" id="savepdf">PDF로 저장</button>
@@ -186,15 +188,15 @@ textarea{min-height:84px;resize:vertical}
 <script>
 /* ===== 교사 설정 ===== */
 const STREET='행궁동 화서문로', Y0=2016, Y1=2026;
-/* 건물 1~18번 좌표 [위도, 경도]. 교사가 지도에서 직접 맞춘 값이다. */
-const BLDG_LL=[[37.285552,127.013948],[37.285513,127.01379],[37.285499,127.013631],[37.285481,127.013519],[37.285458,127.013366],[37.285445,127.013264],[37.285417,127.013103],[37.285387,127.012953],[37.28549,127.012915],[37.285558,127.012897],[37.285637,127.012872],[37.285268,127.013092],[37.285309,127.013353],[37.285324,127.013433],[37.285343,127.013538],[37.285362,127.013672],[37.285385,127.013784],[37.285413,127.013918]];
+/* 건물 1~23번 좌표 [위도, 경도]. 12~16번은 구글 지도 링크에서 얻은 값이다. */
+const BLDG_LL=[[37.285552,127.013948],[37.285513,127.01379],[37.285499,127.013631],[37.285481,127.013519],[37.285458,127.013366],[37.285445,127.013264],[37.285417,127.013103],[37.285387,127.012953],[37.28549,127.012915],[37.285558,127.012897],[37.285637,127.012872],[37.286237,127.012453],[37.286162,127.012453],[37.285887,127.012609],[37.285712,127.012672],[37.285662,127.012703],[37.285268,127.013092],[37.285309,127.013353],[37.285324,127.013433],[37.285343,127.013538],[37.285362,127.013672],[37.285385,127.013784],[37.285413,127.013918]];
 const EST=[];
 /* 2026년 업종과 분류(R 주택 / N 주민 대상 / T 외지인 대상 / F 프랜차이즈 / E 빈 건물). 분류는 초안이니 확인 후 고친다. 비우면 학생이 입력한다. */
 /* 학생에게 보여 줄 2016년 예시(건물 번호: 업종, 분류). 한 건물에 점포가 여러 개이면 분류를 N,T,T처럼 쓴다. */
-const PRE16={1:{b:'포차 속에 통닭',k:'음식점',c:'T'},2:{b:'골목집',k:'음식점',c:'T'},3:{b:'그릇가게 / 점술집',k:'그릇·점술',c:'T'},5:{b:'가고 옷 수선',k:'수선',c:'N'},7:{b:'나무 공방 / 정기화물택배 / 철학원',k:'공방·택배·철학원',c:'T,N,T'},8:{b:'천왕사 / 죽염 인테리어',k:'절·인테리어',c:'T,N'},9:{b:'주택',k:'',c:'R'},15:{b:'태성 떡방앗간',k:'방앗간',c:'N'}};
+const PRE16={1:{b:'포차 속에 통닭',k:'음식점',c:'N'},2:{b:'골목집',k:'음식점',c:'N'},3:{b:'그릇가게 / 점술집',k:'그릇·점술',c:'N,T'},5:{b:'가고 옷 수선',k:'수선',c:'N'},7:{b:'나무 공방 / 정기화물택배 / 철학원',k:'공방·택배·철학원',c:'T,N,T'},8:{b:'천왕사 / 죽염 인테리어',k:'절·인테리어',c:'T,N'},9:{b:'주택',k:'',c:'R'},12:{b:'주택',k:'',c:'R'},13:{b:'주택',k:'',c:'R'},16:{b:'주택',k:'',c:'R'},18:{b:'헤어샵 / 조각보공방',k:'미용·공방',c:'N,T'},19:{b:'포장마차 / 전기공사',k:'포차·전기',c:'N,N'},20:{b:'태성 떡방앗간',k:'방앗간',c:'N'}};
 const NOW=[
  {b:'포토이즘',k:'셀프포토',c:'T'},
- {b:'골목집',k:'음식점',c:'T'},
+ {b:'골목집',k:'음식점',c:'N'},
  {b:'로지엔 드 메종(ROSIEN DE MAISON)',k:'셀프포토',c:'T'},
  {b:'코샤마트',k:'마트',c:'N'},
  {b:'가교공인중개사 / 문꼬치',k:'부동산·꼬치',c:'N,T'},
@@ -204,16 +206,20 @@ const NOW=[
  {b:'레코드엠',k:'의류',c:'T'},
  {b:'샘뷰티크',k:'미용학원',c:'T'},
  {b:'매트그린',k:'카페',c:'T'},
+ {b:'노체부엌',k:'바(bar)',c:'T'},
+ {b:'얌얌차',k:'음식점',c:'T'},
+ {b:'빌라',k:'',c:'R'},
+ {b:'버터앤츄',k:'카페',c:'T'},
+ {b:'주택',k:'',c:'R'},
  {b:'GS25 수원행리단길점',k:'편의점',c:'F'},
- {b:'봉쥬르 / 뽑기샵',k:'소품·뽑기',c:'T'},
- {b:'모드빈티지 / 오소(ohso)',k:'셀프포토·꽃집',c:'T'},
+ {b:'봉쥬르 / 뽑기샵',k:'소품·뽑기',c:'T'},{b:'모드빈티지 / 오소(ohso)',k:'셀프포토·꽃집',c:'T'},
  {b:'공사중',k:'',c:'E'},
  {b:'뮤니버스',k:'소품',c:'T'},
  {b:'스티커사진',k:'셀프포토',c:'T'},
  {b:'존앤진피자',k:'음식점',c:'T'}];
 /* 제출 받을 Google Apps Script 웹 앱 주소(선택). 비워 두면 제출 버튼이 나타나지 않는다. */
 const SRC1=''; /* 자료 1 그래프의 출처·기준 연도를 적으면 그림 아래에 표시된다. 예: '출처: ○○○ (2025)' */
-const SUBMIT_URL='';
+const SUBMIT_URL='https://script.google.com/macros/s/AKfycbztcmOBpP2t8zEZpQwMbsXFHzlLjaf4D-QhB6IsFj8VCsyLrhb2I0avRDdO5Os3XQ/exec';
 /* ===================== */
 
 const N=BLDG_LL.length;
@@ -235,6 +241,7 @@ const COPT='<option value="">— 선택 —</option>'+COMBO;
 const rep=v=>{const a=String(v||'').toUpperCase().split(/[^RNTFE]+/).filter(Boolean);if(!a.length)return '';const m=a.filter(x=>x!=='E');if(!m.length)return 'E';for(const k of 'FTNR')if(m.includes(k))return k;return ''};
 const was=i=>PRE16[i+1]?PRE16[i+1]:{b:S.rows[i].b16,c:S.rows[i].c16};
 const chips=c=>String(c||'').toUpperCase().split(/[^RNTFE]+/).filter(Boolean).map(x=>`<span class="chip">${x}</span>`).join(' ');
+const chgOf=i=>{const o=PRE16[i+1];return o&&o.chg!=null?o.chg:chgIdx(was(i).c,nowOf(i).c)};
 function chgIdx(a,b){a=rep(a);b=rep(b);
   if(!a||!b) return -1;
   if(a===b) return 0;
@@ -251,19 +258,19 @@ const opts='<option value="">— 선택 —</option>'+Object.entries(CATS).map((
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 function build(){
-  $('kakao').href='https://map.kakao.com/?q='+encodeURIComponent('수원시 팔달구 화서문로 16');
+  $('kakao').href='https://map.kakao.com/?q='+encodeURIComponent('경기 수원시 팔달구 신풍동 327');
   const tb=$('tbl').tBodies[0];tb.innerHTML='';
   for(let i=0;i<N;i++){
     const tr=document.createElement('tr');tr.id='r'+i;
     const now=fixedNow(i)?`<td class="fixed">${esc(NOW[i].b)}${NOW[i].k?`<small>${esc(NOW[i].k)}</small>`:''}</td><td>${NOW[i].c?chips(NOW[i].c):''}</td>`
-      :`<td><input type="text" data-i="${i}" data-k="b26" placeholder="로드뷰 확인 후 입력" aria-label="${i+1}번 ${Y1}년 업종"></td><td><input type="text" data-i="${i}" data-k="c26" placeholder="예: N,T" maxlength="20" aria-label="${i+1}번 ${Y1} 분류"></td>`;
+      :`<td><input type="text" data-i="${i}" data-k="b26" placeholder="로드뷰 확인 후 입력" aria-label="${i+1}번 ${Y1}년 업종"></td><td><select class="pick" data-ci="${i}" data-ck="c26" aria-label="${i+1}번 ${Y1} 분류">${COPT}</select></td>`;
     const ex=PRE16[i+1];
     const old=ex?`<td class="fixed">${esc(ex.b)}${ex.k?`<small>${esc(ex.k)}</small>`:''}</td><td>${chips(ex.c)}</td>`
       :`<td><input type="text" data-i="${i}" data-k="b16" placeholder="로드뷰 확인 후 입력" aria-label="${i+1}번 ${Y0}년 업종"></td><td><select class="pick" data-ci="${i}" aria-label="${i+1}번 ${Y0} 분류">${COPT}</select></td>`;
     tr.innerHTML=`<td class="n">${i+1}</td>${old}${now}<td id="chg${i}"></td>`;
     tb.appendChild(tr);
   }
-  tb.addEventListener('change',e=>{const t=e.target;if(!t.classList.contains('pick'))return;S.rows[+t.dataset.ci].c16=t.value;refresh();saveLocal()});
+  tb.addEventListener('change',e=>{const t=e.target;if(!t.classList.contains('pick'))return;S.rows[+t.dataset.ci][t.dataset.ck||'c16']=t.value;refresh();saveLocal()});
   tb.addEventListener('input',e=>{const t=e.target,i=t.dataset.i;if(i==null)return;S.rows[i][t.dataset.k]=t.value;refresh();saveLocal()});
   tb.addEventListener('focusin',e=>{const i=e.target.dataset.i;if(i!=null)hot(+i)});
   $('legend').insertAdjacentHTML('afterbegin',CHG.map((k,i)=>`<span><i style="background:${COL[i]}"></i>${k.replace('미분류','미분류')}</span>`).join(''));
@@ -272,7 +279,7 @@ function build(){
   $('stages').addEventListener('change',e=>{S.stage=e.target.value;saveLocal()});
   for(const k of ['q1','q2','q3','q4','sid','sname','d1a','d1b','d2a','d2b','syn']) $(k).addEventListener('input',e=>{S[k]=e.target.value;saveLocal()});
 }
-const paintCls=i=>{const d=document.querySelector(`select[data-ci="${i}"]`);if(d)d.value=S.rows[i].c16||''};
+const paintCls=i=>{document.querySelectorAll(`select[data-ci="${i}"]`).forEach(d=>{d.value=S.rows[i][d.dataset.ck||'c16']||''})};
 function fill(){
   for(const k of ['q1','q2','q3','q4','sid','sname','d1a','d1b','d2a','d2b','syn']) $(k).value=S[k]||'';
   document.querySelectorAll('#tbl [data-i]').forEach(el=>el.value=S.rows[el.dataset.i][el.dataset.k]||'');
@@ -342,7 +349,7 @@ async function search(){
   }catch(e){$('tilemsg').textContent='주소 검색을 쓸 수 없다. 지도를 끌어 직접 이동한다.'}
 }
 function icon(i){
-  const k=chgIdx(was(i).c,nowOf(i).c);
+  const k=chgOf(i);
   return L.divIcon({className:'',html:`<div class="mk ${k<0?'m5':'m'+k} ${i===hotI?'hot':''} ${editing?'edit':''} ${editing&&EST.includes(i+1)?'est':''}">${i+1}</div>`,iconSize:[26,26],iconAnchor:[13,13]});
 }
 function drawMarkers(){markers.forEach((m,i)=>m.setIcon(icon(i)))}
@@ -366,7 +373,7 @@ $('copybtn').onclick=async()=>{
 function refresh(){
   const cnt=[0,0,0,0,0,0];
   for(let i=0;i<N;i++){
-    const k=chgIdx(was(i).c,nowOf(i).c);
+    const k=chgOf(i);
     $('chg'+i).innerHTML=k<0?'<span class="badge b6">—</span>':`<span class="badge b${k}">${CHG[k]}</span>`;
     if(k>=0)cnt[k]++;
   }
@@ -388,7 +395,7 @@ function buildReport(mapURL){
   const A=v=>v&&v.trim()?esc(v):'<span style="color:#99a">(작성하지 않음)</span>';
   const QA=(q,v)=>`<div class="rq" style="margin:14px 0 4px;font-weight:700">${esc(q)}</div><div class="ra" style="white-space:pre-wrap;word-break:break-all;border:1px solid #cfd6dd;border-radius:6px;padding:10px 12px;min-height:44px">${A(v)}</div>`;
   const cnt=[0,0,0,0,0,0];
-  const rows=Array.from({length:N},(_,i)=>{const w=was(i),n=nowOf(i),k=chgIdx(w.c,n.c);if(k>=0)cnt[k]++;const f=c=>c?String(c).replace(/,/g,'+'):'—';
+  const rows=Array.from({length:N},(_,i)=>{const w=was(i),n=nowOf(i),k=chgOf(i);if(k>=0)cnt[k]++;const f=c=>c?String(c).replace(/,/g,'+'):'—';
     return `<tr><td style="text-align:center">${i+1}</td><td>${esc(w.b||'—')}</td><td style="text-align:center">${f(w.c)}</td><td>${esc(n.b||'—')}</td><td style="text-align:center">${f(n.c)}</td><td>${k<0?'—':`<span class="badge b${k}">${CHG[k]}</span>`}</td></tr>`}).join('');
   const td='border:1px solid #d5dbe0;padding:5px 8px';
   r.innerHTML=`<h1 style="font-size:22px;margin:0 0 4px">행궁동 화서문로, 얼마나 변했는가? — 활동 결과</h1>
@@ -458,24 +465,26 @@ function buildPDF(pages){
 }
 function dl(blob,name){const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)}
 const mb=n=>(n/1048576).toFixed(1)+'MB';
+async function makeFile(kind){
+  const cv=await snap();let blob=null;
+  for(let f=1,tries=0;tries<8;tries++){
+    const c=f<1?shrink(cv,f):cv;
+    for(const q of [0.85,0.72,0.6]){
+      if(kind==='img'){const b=b64bytes(c.toDataURL('image/jpeg',q));if(b.length<=LIMIT.img){blob=new Blob([b],{type:'image/jpeg'});break}}
+      else{const pg=slices(c,q),t=pg.reduce((a,p)=>a+p.b.length,0);if(t<=LIMIT.pdf){blob=buildPDF(pg);break}}
+    }
+    if(blob)break;f*=0.8;
+  }
+  if(!blob)throw new Error('파일 크기를 줄이지 못했다');
+  return blob;
+}
 async function saveAs(kind){
   const btn=$(kind==='pdf'?'savepdf':'saveimg');btn.disabled=true;say('저장 파일을 만드는 중이다…');
-  try{
-    let cv=await snap(),blob=null;
-    for(let f=1,tries=0;tries<8;tries++){
-      const c=f<1?shrink(cv,f):cv;
-      for(const q of [0.85,0.72,0.6]){
-        if(kind==='img'){const b=b64bytes(c.toDataURL('image/jpeg',q));if(b.length<=LIMIT.img){blob=new Blob([b],{type:'image/jpeg'});break}}
-        else{const pg=slices(c,q),t=pg.reduce((a,p)=>a+p.b.length,0);if(t<=LIMIT.pdf){blob=buildPDF(pg);break}}
-      }
-      if(blob)break;f*=0.8;
-    }
-    if(!blob)throw new Error('파일 크기를 줄이지 못했다');
-    dl(blob,fname(kind==='pdf'?'pdf':'jpg'));
-    say(`저장했다(${mb(blob.size)}). 다운로드 폴더를 확인한다.`);
-  }catch(e){say('저장하지 못했다: '+(e&&e.message?e.message:e))}
+  try{const blob=await makeFile(kind);dl(blob,fname(kind==='pdf'?'pdf':'jpg'));say(`저장했다(${mb(blob.size)}). 다운로드 폴더를 확인한다.`)}
+  catch(e){say('저장하지 못했다: '+(e&&e.message?e.message:e))}
   finally{btn.disabled=false}
 }
+const blobB64=b=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]);r.onerror=no;r.readAsDataURL(b)});
 $('savepdf').onclick=()=>saveAs('pdf');
 $('saveimg').onclick=()=>saveAs('img');
 let rs=false;
@@ -487,9 +496,17 @@ if(SUBMIT_URL){
   $('submit').hidden=false;
   $('submit').onclick=async()=>{
     if(!S.sid.trim()||!S.sname.trim()){say('학번과 이름을 먼저 적는다.');$('sid').focus();return}
-    const rows=S.rows.map((r,i)=>({n:i+1,b16:was(i).b,c16:was(i).c,b26:nowOf(i).b,c26:nowOf(i).c,chg:CHG[chgIdx(was(i).c,nowOf(i).c)]||''}));
-    try{await fetch(SUBMIT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({sid:S.sid,sname:S.sname,rows,q1:S.q1,q2:S.q2,q3:S.q3,stage:S.stage,q4:S.q4,d1a:S.d1a,d1b:S.d1b,d2a:S.d2a,d2b:S.d2b,syn:S.syn,at:new Date().toISOString()})});say('제출했다. ('+new Date().toLocaleString('ko-KR')+') 고쳐서 다시 제출하면 새 줄로 쌓인다.')}
-    catch(e){say('제출하지 못했다. 인터넷 연결을 확인한다.')}
+    const btn=$('submit');btn.disabled=true;say('제출 파일(PDF)을 만드는 중이다…');
+    const rows=S.rows.map((r,i)=>({n:i+1,b16:was(i).b,c16:was(i).c,b26:nowOf(i).b,c26:nowOf(i).c,chg:CHG[chgOf(i)]||''}));
+    let file=null;
+    try{const blob=await makeFile('pdf');file={name:fname('pdf'),mime:'application/pdf',data:await blobB64(blob)}}
+    catch(e){say('PDF를 만들지 못해 답안 글만 제출한다…')}
+    try{
+      say('제출하는 중이다…');
+      await fetch(SUBMIT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({sid:S.sid,sname:S.sname,rows,q1:S.q1,q2:S.q2,q3:S.q3,stage:S.stage,q4:S.q4,d1a:S.d1a,d1b:S.d1b,d2a:S.d2a,d2b:S.d2b,syn:S.syn,at:new Date().toISOString(),file})});
+      say('제출했다'+(file?'(PDF 포함)':'(PDF 없이 글만)')+'. ('+new Date().toLocaleString('ko-KR')+') 고쳐서 다시 제출하면 새 줄로 쌓인다.');
+    }catch(e){say('제출하지 못했다. 인터넷 연결을 확인한다.')}
+    finally{btn.disabled=false}
   };
 }
 if(SRC1)$('src1').textContent=SRC1;
