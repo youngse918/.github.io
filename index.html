@@ -62,7 +62,9 @@ td input::placeholder{color:#a3adbd}
 .stat b{display:block;font-size:22px;line-height:1.2}.stat span{font-size:12px;color:var(--muted)}
 .stat.s0{border-color:var(--c0)}.stat.s1{border-color:var(--c1)}.stat.s2{border-color:var(--c2)}.stat.s3{border-color:var(--c3)}.stat.s4{border-color:var(--c4)}
 .q{display:flex;flex-direction:column;gap:6px}
-.q>label{font-weight:700}.q>label i{font-style:normal;color:var(--muted);margin-right:8px}
+.q>label{font-weight:700}
+.q.syn{margin-top:18px;padding:14px 16px;border:2px solid var(--ink,#1b2625);border-radius:10px}.q.syn>label{font-size:1.3em;line-height:1.5}
+.notice{margin:18px 0 6px;padding:12px 16px;background:#fff6e5;border:2px solid #e0a43a;border-radius:10px;color:#5a3a08;font-size:1.05em;line-height:1.6}.notice b{margin-right:8px}.q>label i{font-style:normal;color:var(--muted);margin-right:8px}
 .hint{font-size:12.5px;background:#fff6e5;color:#6b4410;border-radius:6px;padding:6px 10px}
 textarea{min-height:84px;resize:vertical}
 .stages{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
@@ -143,7 +145,7 @@ textarea{min-height:84px;resize:vertical}
 
 <section class="panel two">
   <h2><span class="stepchip">2단계</span>분석</h2>
-  <div class="q"><label for="q1"><i>1</i>가장 많이 나타난 변화 유형은 무엇인가?</label><textarea id="q1"></textarea></div>
+  <div class="q"><label for="q1"><i>1</i>변화가 일어난 건물은 몇 곳인가?</label><textarea id="q1"></textarea></div>
   <div class="q"><label for="q2"><i>2</i>2016년과 비교해 주민을 위한 공간은 늘었는가, 줄었는가?</label><textarea id="q2"></textarea></div>
   <div class="q"><label for="q3"><i>3</i>행궁동 화서문로는 지금 누구를 위한 공간인가?</label><textarea id="q3"></textarea></div>
   <div class="q"><label><i>4</i>이 거리는 장소의 생애주기 중 어느 단계에 있는가? 지도 근거를 함께 쓰시오.</label>
@@ -172,7 +174,8 @@ textarea{min-height:84px;resize:vertical}
       <div class="q"><label for="d2b"><i>해석</i>읽기에서 확인한 인구 변화는 1단계에서 확인한 업종 변화와 어떤 관련이 있을 수 있는가? 근거와 함께 쓴다.</label><textarea id="d2b"></textarea></div>
     </div>
   </div>
-    <div class="q"><label for="syn"><i>종합</i>앞으로 행궁동은 어떤 모습일지 예측해 보자. 예상되는 문제 상황은 무엇인가?</label><textarea id="syn"></textarea></div>
+    <div class="q syn"><label for="syn"><i>종합</i>앞으로 행궁동은 어떤 모습일지 예측해 보자. 예상되는 문제 상황은 무엇인가?</label><textarea id="syn"></textarea></div>
+  <div class="notice" role="note"><b>제출 전 확인</b> 모든 항목의 답안을 작성했는지 확인한 뒤, 담당 선생님께 제출 확인을 받으세요.</div>
   <div class="actions">
     <button class="btn main" id="submit" hidden>제출</button>
     <button class="btn" id="savepdf">PDF로 저장</button>
@@ -194,7 +197,7 @@ const BLDG_LL=[[37.285552,127.013948],[37.285513,127.01379],[37.285499,127.01363
 const EST=[];
 /* 2026년 업종과 분류(R 주택 / N 주민 대상 / T 외지인 대상 / F 프랜차이즈 / E 빈 건물). 분류는 초안이니 확인 후 고친다. 비우면 학생이 입력한다. */
 /* 학생에게 보여 줄 2016년 예시(건물 번호: 업종, 분류). 한 건물에 점포가 여러 개이면 분류를 N,T,T처럼 쓴다. */
-const PRE16={1:{b:'포차 속에 통닭',k:'음식점',c:'N'},2:{b:'골목집',k:'음식점',c:'N'},3:{b:'그릇가게 / 점술집',k:'그릇·점술',c:'N,T'},5:{b:'가고 옷 수선',k:'수선',c:'N'},7:{b:'나무 공방 / 정기화물택배 / 철학원',k:'공방·택배·철학원',c:'T,N,T'},8:{b:'천왕사 / 죽염 인테리어',k:'절·인테리어',c:'T,N'},9:{b:'주택',k:'',c:'R'},12:{b:'주택',k:'',c:'R'},13:{b:'주택',k:'',c:'R'},16:{b:'주택',k:'',c:'R'},18:{b:'헤어샵 / 조각보공방',k:'미용·공방',c:'N,T'},19:{b:'포장마차 / 전기공사',k:'포차·전기',c:'N,N'},20:{b:'태성 떡방앗간',k:'방앗간',c:'N'}};
+const PRE16={1:{b:'포차 속에 통닭',k:'음식점',c:'N'},2:{b:'골목집',k:'음식점',c:'N'},3:{b:'그릇가게 / 점술집',k:'그릇·점술',c:'N,T'},5:{b:'가교 옷 수선 / 가교 공인중개사',k:'수선·부동산',c:'N'},7:{b:'나무 공방 / 정기화물택배 / 철학원',k:'공방·택배·철학원',c:'T,N,T'},8:{b:'천왕사 / 죽림 인테리어',k:'절·인테리어',c:'T,N'},9:{b:'주택',k:'',c:'R'},12:{b:'주택',k:'',c:'R'},13:{b:'주택',k:'',c:'R'},16:{b:'주택',k:'',c:'R'},18:{b:'헤어샵 / 조각보공방',k:'미용·공방',c:'N,T'},19:{b:'포장마차 / 전기공사',k:'포차·전기',c:'N,N'},20:{b:'태성 떡방앗간',k:'방앗간',c:'N'}};
 const NOW=[
  {b:'포토이즘',k:'셀프포토',c:'T'},
  {b:'골목집',k:'음식점',c:'N'},
@@ -216,7 +219,7 @@ const NOW=[
  {b:'봉쥬르 / 뽑기샵',k:'소품·뽑기',c:'T'},{b:'모드빈티지 / 오소(ohso)',k:'셀프포토·꽃집',c:'T'},
  {b:'공사중',k:'',c:'E'},
  {b:'뮤니버스',k:'소품',c:'T'},
- {b:'스티커사진',k:'셀프포토',c:'T'},
+ {b:'스티커즈 / 코드 바이 포토시그니처',k:'셀프포토',c:'T'},
  {b:'존앤진피자',k:'음식점',c:'T'}];
 /* 제출 받을 Google Apps Script 웹 앱 주소(선택). 비워 두면 제출 버튼이 나타나지 않는다. */
 const SRC1=''; /* 자료 1 그래프의 출처·기준 연도를 적으면 그림 아래에 표시된다. 예: '출처: ○○○ (2025)' */
